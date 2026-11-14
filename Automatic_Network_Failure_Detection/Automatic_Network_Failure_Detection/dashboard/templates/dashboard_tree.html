@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Topology</title>
+    
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <script>
+        
+
+        function loadDetails(nodeId) {
+            fetch("/api/node/" + nodeId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById("details").innerHTML =
+                            "<p>Error loading node.</p>";
+                    } else {
+
+                        document.getElementById("details").innerHTML = `
+<p><strong>Name:</strong> ${data.name}</p>
+<p><strong>Type:</strong> ${data.node_type}</p>
+<p><strong>IP Address:</strong> ${data.ip_address ?? "N/A"}</p>
+<p><strong>Status:</strong> ${data.status ?? "N/A"}</p>
+<p><strong>Latency:</strong> ${data.latency_ms ?? "N/A"} ms</p>
+<p><strong>Last Updated:</strong> ${data.last_updated ?? "N/A"}</p>
+
+${
+    data.prediction && data.prediction.includes("High Risk")
+    ? `<p><strong>Prediction:</strong> 
+         <span class="prediction-high">${data.prediction}</span>
+       </p>`
+    : ""
+}
+
+<br>
+
+<a href="/edit_node/${nodeId}">
+    <button>Edit Network</button>
+</a>
+
+<a href="/delete_node/${nodeId}" 
+   onclick="return confirm('Are you sure you want to delete this node?')">
+    <button class="delete">Delete Network</button>
+</a>
+`;
+                    }
+                });
+        }
+    </script>
+</head>
+
+<body>
+
+<h1>🌐 Smart Network Monitoring Dashboard</h1>
+
+<div style="padding: 10px 20px;">
+    <a href="/add_vlan">
+        <button>➕ Add New VLAN</button>
+    </a>
+</div>
+
+<hr>
+
+<div class="layout">
+
+    <!-- LEFT: TREE -->
+    <div class="tree-panel">
+
+        {% macro render_node(node) %}
+        <li>
+
+            <!-- Clickable Node -->
+            <span class="node-name"
+                  onclick="loadDetails('{{ node.id }}');"
+                           <!-- ICONS -->
+                {% if node.node_type == 'ISP' %}
+    🌍
+{% elif node.node_type == 'CORE' %}
+    🖥️
+{% elif node.node_type in ['VLAN', 'LOGICAL'] %}
+    🏠
+{% else %}
+    🔗
+{% endif %}
+
+                {{ node.name }}
+            </span>
+
+            <!-- STATUS -->
+            {% if node.name != "INTERNET_SERVICE" and node.status %}
+    <span class="status-container">
+        <span class="dot {{ node.status }}"></span>
+        {{ node.status }}
+    </span>
+{% endif %}
+
+            <!-- CHILDREN -->
+            {% if node.children %}
+                <ul id="child-{{ node.id }}">
+                    {% for child in node.children %}
+                        {{ render_node(child) }}
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+        </li>
+        {% endmacro %}
+
+        <ul>
+            {% for node in roots %}
+                <li style="font-weight: bold; font-size: 16px;">
+
+                    {% if node.name == "INTERNET_SERVICE" %}
+                        
+                    {% endif %}
+
+                    {{ render_node(node) }}
+
+                </li>
+            {% endfor %}
+        </ul>
+
+    </div>
+
+    <!-- RIGHT: DETAILS -->
+    <div class="details-panel">
+        <h2>📊 Node Details</h2>
+        <div id="details" class="details-box">
+            <p>Select a node to view detailed network information.</p>
+        </div>
+    </div>
+
+</div>
+
+<hr>
+
+<h2 style="padding-left:20px;">🚨 Recent Alerts</h2>
+
+{% if recent_alerts %}
+<table>
+    <tr>
+        <th>Node</th>
+        <th>Type</th>
+        <th>Time</th>
+        <th>Message</th>
+    </tr>
+
+    {% for alert in recent_alerts %}
+    <tr>
+        <td>{{ alert.name }}</td>
+        <td>{{ alert.alert_type }}</td>
+        <td>{{ alert.alert_time }}</td>
+        <td>{{ alert.message }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+
+<div style="padding-left:20px;">
+    <a href="/alerts"><strong>View Full Alert History →</strong></a>
+</div>
+
+{% else %}
+<p style="padding-left:20px;">No alerts recorded yet.</p>
+{% endif %}
+
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Topology View</title>
+    <style>
+        /* ── Base ─────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        /* ── Header ────────────────────────────────── */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            background: rgba(15,23,42,0.97);
+            border-bottom: 1px solid #1e3a5f;
+            padding: 14px 28px;
+            backdrop-filter: blur(8px);
+        }
+        .header h2 { font-size: 1.15rem; font-weight: 700; color: #7dd3fc; }
+        .back-btn {
+            text-decoration: none;
+            color: #38bdf8;
+            font-size: 0.88rem;
+            font-weight: 600;
+            padding: 5px 14px;
+            border: 1px solid #38bdf8;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .back-btn:hover { background: rgba(56,189,248,0.12); }
+
+        /* ── Legend ─────────────────────────────────── */
+        .legend {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 10px 28px;
+            background: #0f172a;
+            border-bottom: 1px solid #1e293b;
+            font-size: 0.78rem;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+        /* ── Main scroll container ─────────────────── */
+        .topology-scroll {
+            padding: 30px 28px 60px;
+            overflow-x: auto;
+        }
+
+        /* ── Tree CSS ────────────────────────────────── */
+        ul.tree, ul.tree ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        ul.tree ul {
+            padding-left: 24px;
+            border-left: 2px solid #1e3a5f;
+            margin-left: 18px;
+            margin-top: 4px;
+        }
+        ul.tree li {
+            position: relative;
+            padding: 0;
+            margin: 0;
+        }
+        ul.tree ul > li::before {
+            content: '';
+            position: absolute;
+            top: 17px;
+            left: -24px;
+            width: 22px;
+            height: 2px;
+            background: #1e3a5f;
+        }
+
+        /* ── Node card ──────────────────────────────── */
+        .node-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+            padding: 6px 14px 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #1e3a5f;
+            background: #1e293b;
+            cursor: default;
+            transition: background 0.18s, border-color 0.18s, transform 0.12s;
+            white-space: nowrap;
+        }
+        .node-row:hover {
+            background: #263450;
+            border-color: #38bdf8;
+            transform: translateX(2px);
+        }
+
+        /* Type badge */
+        .type-badge {
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .badge-SERVICE  { background:#4f46e5; color:#e0e7ff; }
+        .badge-ISP      { background:#0891b2; color:#e0f7ff; }
+        .badge-CORE     { background:#0369a1; color:#bae6fd; }
+        .badge-VLAN     { background:#065f46; color:#a7f3d0; }
+        .badge-LOGICAL  { background:#44403c; color:#d6d3d1; }
+
+        /* Status dot */
+        .status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .dot-UP           { background: #22c55e; box-shadow: 0 0 5px #22c55e88; }
+        .dot-DOWN         { background: #ef4444; box-shadow: 0 0 5px #ef444488; }
+        .dot-HIGH_LATENCY { background: #f59e0b; box-shadow: 0 0 5px #f59e0b88; }
+        .dot-none         { background: #475569; }
+
+        .node-icon { font-size: 1rem; }
+
+        .node-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        .node-ip {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-family: 'Courier New', monospace;
+            background: #0f172a;
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid #334155;
+        }
+        .latency-pill {
+            font-size: 0.7rem;
+            padding: 1px 7px;
+            border-radius: 20px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── Jinja2 macro defined FIRST before any use ── -->
+    {% macro render_node(node) %}
+    <li>
+        <div class="node-row">
+            <!-- Status dot -->
+            {% if node.status == 'UP' %}
+                <span class="status-dot dot-UP" title="UP"></span>
+            {% elif node.status == 'DOWN' %}
+                <span class="status-dot dot-DOWN" title="DOWN"></span>
+            {% elif node.status == 'HIGH_LATENCY' %}
+                <span class="status-dot dot-HIGH_LATENCY" title="High Latency"></span>
+            {% else %}
+                <span class="status-dot dot-none" title="No data"></span>
+            {% endif %}
+
+            <!-- Icon -->
+            {% if node.node_type == 'SERVICE' %}
+                <span class="node-icon">🌐</span>
+            {% elif node.node_type == 'ISP' %}
+                <span class="node-icon">📡</span>
+            {% elif node.node_type == 'CORE' %}
+                <span class="node-icon">🖥️</span>
+            {% elif node.node_type == 'VLAN' %}
+                <span class="node-icon">🔗</span>
+            {% else %}
+                <span class="node-icon">🏢</span>
+            {% endif %}
+
+            <!-- Type badge -->
+            <span class="type-badge badge-{{ node.node_type }}">{{ node.node_type }}</span>
+
+            <!-- Name -->
+            <span class="node-name">{{ node.name | replace('_', ' ') }}</span>
+
+            <!-- IP address (only if present) -->
+            {% if node['ip_address'] %}
+                <span class="node-ip">{{ node['ip_address'] }}</span>
+            {% endif %}
+
+            <!-- Latency pill (only if present) -->
+            {% if node['latency_ms'] %}
+                <span class="latency-pill">{{ node['latency_ms'] | round(1) }} ms</span>
+            {% endif %}
+        </div>
+
+        <!-- Children -->
+        {% if node.children %}
+            <ul>
+                {% for child in node.children %}
+                    {{ render_node(child) }}
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </li>
+    {% endmacro %}
+
+    <!-- Sticky header -->
+    <div class="header">
+        <h2>🌐 Network Topology Map</h2>
+        <a href="/" class="back-btn">← NOC Dashboard</a>
+        <a href="/tree" class="back-btn">📋 Tree View</a>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>UP</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>DOWN</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>High Latency</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#475569"></span>No Data</div>
+        <div class="legend-item" style="margin-left:auto; color:#64748b; font-style:italic;">Scroll to explore full tree ↕</div>
+    </div>
+
+    <!-- Scrollable tree area -->
+    <div class="topology-scroll">
+        <ul class="tree">
+            {% for node in roots %}
+                {{ render_node(node) }}
+            {% endfor %}
+        </ul>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Node Detail</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+
+        .UP { color: green; font-weight: bold; }
+        .DOWN { color: red; font-weight: bold; }
+        .HIGH_LATENCY { color: orange; font-weight: bold; }
+
+        .prediction-high { color: orange; font-weight: bold; }
+        .prediction-normal { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<h2>Node Details</h2>
+
+<p><strong>Name:</strong> {{ node.name }}</p>
+<p><strong>Type:</strong> {{ node.node_type }}</p>
+
+<p><strong>Status:</strong>
+   <span class="{{ node.status }}">{{ node.status }}</span>
+</p>
+
+<p><strong>Latency:</strong> {{ node.latency_ms }} ms</p>
+<p><strong>Last Updated:</strong> {{ node.last_updated }}</p>
+
+<!-- ✅ CORRECT PREDICTION DISPLAY -->
+{% if "High Risk" in prediction %}
+<p><strong>Prediction:</strong>
+   <span class="prediction-high">
+       {{ prediction }}
+   </span>
+</p>
+{% endif %}
+
+<a href="/">Back to Dashboard</a>
+
+</body>
+</html>

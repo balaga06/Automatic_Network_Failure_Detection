@@ -1,0 +1,1044 @@
+<!-- DASHBOARD VERSION 2.0 - RECENTLY UPDATED -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitoring Dashboard v2.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Panzoom removed: map is now plain scrollable -->
+    <style>
+        :root {
+            /* Dark Theme NOC Style */
+            --bg-color: #0A0E17;
+            --card-bg: #111827;
+            --card-border: #1F2937;
+            --card-shadow: rgba(0, 0, 0, 0.4);
+
+            --text-main: #F3F4F6;
+            --text-muted: #9CA3AF;
+
+            --up-color: #10B981;
+            --down-color: #EF4444;
+            --warn-color: #F59E0B;
+            --line-normal: #334155;
+
+            --header-bg: #111827;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        /* Top Navigation */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 100;
+            box-shadow: 0 2px 8px var(--card-shadow);
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #FFF;
+        }
+
+        /* Nav Tabs */
+        .tabs {
+            display: flex;
+            background: #1F2937;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid #374151;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #374151;
+            color: #60A5FA;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            background: #1F2937;
+            border: 1px solid #374151;
+            color: #E5E7EB;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-action:hover {
+            background: #374151;
+            color: #FFF;
+        }
+
+        /* View Containers */
+        .view-container {
+            position: absolute;
+            top: 80px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: auto;
+            display: none;
+        }
+
+        .view-container.active {
+            display: block;
+        }
+
+        /* -------------------------------------
+           TREE VIEW (Hierarchical List)
+           ------------------------------------- */
+        .tree-view-content {
+            padding: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+            color: #E5E7EB;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .basic-tree ul {
+            list-style: none;
+            padding-left: 20px;
+            margin: 2px 0;
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .basic-tree li {
+            position: relative;
+            padding: 1px 0;
+            display: block;
+        }
+
+        .tree-node-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .tree-node-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tree-icon {
+            font-size: 1.1rem;
+            min-width: 20px;
+        }
+
+        .tree-name {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #F3F4F6;
+        }
+
+        .tree-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 6px;
+        }
+
+        .tree-status-UP {
+            background: #10B981;
+            box-shadow: 0 0 6px #10B981;
+        }
+
+        .tree-status-DOWN {
+            background: #EF4444;
+            box-shadow: 0 0 6px #EF4444;
+        }
+
+        .tree-status-WARN {
+            background: #F59E0B;
+            box-shadow: 0 0 6px #F59E0B;
+        }
+
+        .tree-status-N/A {
+            background: #4B5563;
+        }
+
+        .tree-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            background: #1F2937;
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .tree-item:hover {
+            border-color: #3B82F6;
+            background: #374151;
+        }
+
+        .tree-item.down {
+            border-color: var(--down-color);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .tree-icon {
+            font-size: 1.1rem;
+        }
+
+        .tree-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .bg-up {
+            background: var(--up-color);
+        }
+
+        .bg-down {
+            background: var(--down-color);
+        }
+
+        .bg-warn {
+            background: var(--warn-color);
+        }
+
+        .bg-none {
+            background: #4B5563;
+        }
+
+
+        /* -------------------------------------
+           REAL MAP VIEW (Primary Dashboard)
+           Plain scrollable — no zoom, no drag
+           ------------------------------------- */
+        .topology-wrapper {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            /* scroll in all 4 directions */
+            cursor: default;
+            background-color: var(--bg-color);
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .topology-container {
+            position: relative;
+            width: 4500px;
+            /* Increased width to avoid overlaps */
+            height: 3000px;
+        }
+
+        #lines-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Map Node Cards — extra compact */
+        .node-card {
+            position: absolute;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 8px;
+            padding: 6px;
+            width: 100px;
+            box-shadow: 0 4px 6px var(--card-shadow);
+            z-index: 2;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .node-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #F9FAFB;
+            word-wrap: break-word;
+            line-height: 1.2;
+        }
+
+        .node-icon-box img {
+            width: 30px;
+            height: 30px;
+            margin-bottom: 4px;
+        }
+
+        /* Zoom controls floating bar */
+        .zoom-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #1F2937;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid #374151;
+        }
+
+        .zoom-btn {
+            background: #374151;
+            border: 1px solid #4B5563;
+            color: #FFF;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: #60A5FA;
+            color: #000;
+            border-color: #FFF;
+        }
+
+        .zoom-level-label {
+            font-size: 0.8rem;
+            color: #60A5FA;
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .node-card:hover {
+            transform: translateY(-4px);
+            border-color: #3B82F6;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.6);
+            z-index: 10;
+        }
+
+        .node-icon-box {
+            width: 50px;
+            height: 50px;
+            background: #1F2937;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+            margin-bottom: 10px;
+        }
+
+        .node-icon-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .node-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #F9FAFB;
+            word-wrap: break-word;
+        }
+
+        .node-status {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            display: inline-block;
+            letter-spacing: 0.5px;
+        }
+
+        .status-up {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--up-color);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-down {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--down-color);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status-warn {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warn-color);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .status-none {
+            background: #1F2937;
+            color: #9CA3AF;
+            border: 1px solid #374151;
+        }
+
+        .latency-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #3B82F6;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 2px solid var(--bg-color);
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .node-card:hover .latency-badge {
+            opacity: 1;
+        }
+
+        /* Animations */
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+                border-color: rgba(239, 68, 68, 0.8);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+                border-color: rgba(239, 68, 68, 0.2);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+                border-color: rgba(239, 68, 68, 0.8);
+            }
+        }
+
+        .node-card.down {
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes flow {
+            to {
+                stroke-dashoffset: -20;
+            }
+        }
+
+        .path-down {
+            stroke-dasharray: 6, 6;
+            animation: flow 1s linear infinite;
+        }
+
+        /* -------------------------------------
+           SIDE PANEL (Dark Theme)
+           ------------------------------------- */
+        .side-panel {
+            position: fixed;
+            top: 60px;
+            right: -450px;
+            width: 400px;
+            height: calc(100vh - 60px);
+            background: #111827;
+            border-left: 1px solid var(--card-border);
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 200;
+            padding: 30px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .side-panel.open {
+            right: 0;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .close-btn:hover {
+            color: #FFF;
+        }
+
+        .panel-header {
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: #FFF;
+        }
+
+        .panel-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-box {
+            background: #1F2937;
+            border: 1px solid #374151;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #9CA3AF;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #F3F4F6;
+        }
+
+        .action-buttons {
+            margin-top: auto;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3B82F6;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #2563EB;
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 1px solid #EF4444;
+            color: #EF4444;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid #1F2937;
+            border-top: 3px solid #3B82F6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 40px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- TOP NAVIGATION -->
+    <div class="header">
+        <h1 class="header-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+                <path d="M12 12v9" />
+                <path d="m8 17 4 4 4-4" />
+            </svg>
+            Smart Network Topology
+        </h1>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchView('noc')">Map Dashboard</button>
+            <button class="tab-btn" onclick="switchView('tree')">Tree Topology</button>
+        </div>
+
+        <div class="header-actions">
+            <!-- Zoom controls moved to front and made more prominent -->
+            <div class="zoom-bar" id="zoom-bar"
+                style="margin-right: 15px; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 8px; border: 1px solid #374151;">
+                <span
+                    style="font-size: 0.75rem; color: #9CA3AF; margin-right: 8px; font-weight: bold; text-transform: uppercase;">Zoom:</span>
+                <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+                <span class="zoom-level-label" id="zoom-label"
+                    style="color: #60A5FA; font-family: monospace;">70%</span>
+                <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+            </div>
+            <button class="btn-action" onclick="window.location.reload()">🔄 Refresh</button>
+            <button class="btn-action" onclick="window.location.href='/alerts'">🚨 Alerts</button>
+            <button class="btn-action" onclick="window.location.href='/add_vlan'">➕ Add New Node</button>
+        </div>
+    </div>
+
+    <!-- VIEW 1: REAL MAP DASHBOARD (Primary) -->
+    <div id="view-noc" class="view-container active">
+        <div class="topology-wrapper" id="zoom-wrapper">
+            <div class="topology-container" id="noc-container">
+                <svg id="lines-svg"></svg>
+
+                <!-- Flattened Map Elements -->
+                {% macro render_map_nodes(node, parent_id) %}
+                <div class="node-card map-card {% if node.status == 'DOWN' %}down{% endif %}"
+                    id="map-card-{{ node.id }}" data-id="{{ node.id }}" data-name="{{ node.name }}"
+                    data-parent-id="{{ parent_id }}" data-status="{{ node.status or 'UP' }}"
+                    onclick="openPanel(this.dataset.id)">
+
+                    {% if node.latency_ms %}
+                    <div class="latency-badge">{{ node.latency_ms }} ms</div>
+                    {% endif %}
+
+                    <div class="node-icon-box">
+                        <img src="{{ url_for('static', filename='images/campus.png.png') }}" alt="Building">
+                    </div>
+                    <div class="node-name" title="{{ node.name }}">{{ node.name }}</div>
+
+                    {% set s = node.status or 'UNKNOWN' %}
+                    {% if node.name != 'INTERNET_SERVICE' %}
+                        {% if s == 'UP' %}
+                        <div class="node-status status-up">● UP</div>
+                        {% elif s == 'DOWN' %}
+                        <div class="node-status status-down">● DOWN</div>
+                        {% elif s == 'HIGH_LATENCY' %}
+                        <div class="node-status status-warn">● WARN</div>
+                        {% else %}
+                        <div class="node-status status-none">● N/A</div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                {% if node.children %}
+                {% for child in node.children %}
+                {{ render_map_nodes(child, node.id) }}
+                {% endfor %}
+                {% endif %}
+                {% endmacro %}
+
+                {% for node in roots %}
+                {{ render_map_nodes(node, 'None') }}
+                {% endfor %}
+            </div> <!-- End topology-container -->
+        </div> <!-- End topology-wrapper -->
+    </div> <!-- End view-noc -->
+
+    <!-- VIEW 2: TREE TOPOLOGY (Vertical Professional List) -->
+    <div id="view-tree" class="view-container">
+        <div class="tree-view-content">
+            <div class="basic-tree">
+                {% macro render_tree(node) %}
+                <div class="tree-node-item" onclick="openPanel('{{ node.id }}')">
+                    <span class="tree-icon">
+                        {% if node.name == 'INTERNET_SERVICE' %}🔗
+                        {% elif node.name.startswith('BSNL') %}🌍
+                        {% elif node.name == 'ECE_SERVER_ROOM' %}💻
+                        {% else %}🏠{% endif %}
+                    </span>
+                    <span class="tree-name">{{ node.name }}</span>
+                    {% if node.name != 'INTERNET_SERVICE' %}
+                        <span class="tree-status-dot tree-status-{{ node.status or 'N/A' }}"></span>
+                        <span style="font-size: 0.75rem; color: #9CA3AF; margin-left: 8px;">{{ node.status or 'N/A' }}</span>
+                    {% endif %}
+                </div>
+
+                {% if node.children %}
+                <ul>
+                    {% for child in node.children %}
+                    <li>
+                        {{ render_tree(child) }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% endmacro %}
+
+                {% for node in roots %}
+                {{ render_tree(node) }}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Side Panel -->
+    <div class="side-panel" id="side-panel">
+        <button class="close-btn" onclick="closePanel()">×</button>
+        <div class="loader" id="panel-loader"></div>
+        <div id="panel-content" style="display: none;">
+            <div class="panel-header">
+                <h2 class="panel-title" id="p-name">-</h2>
+                <p class="panel-subtitle" id="p-type">-</p>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Status</div>
+                    <div class="stat-value" id="p-status">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Latency</div>
+                    <div class="stat-value" id="p-latency">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">IP Address</div>
+                    <div class="stat-value" id="p-ip">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Last Updated</div>
+                    <div class="stat-value" id="p-updated" style="font-size: 0.85rem;">-</div>
+                </div>
+            </div>
+
+            <!-- Prediction removed as requested -->
+
+            <div class="action-buttons">
+                <a href="#" class="btn btn-primary" id="btn-edit">Edit Node</a>
+                <a href="#" class="btn btn-danger" id="btn-delete"
+                    onclick="return confirm('Delete this node?')">Delete</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ----------------------------------------------------
+        // Tab Switching Logic
+        // ----------------------------------------------------
+        function switchView(viewName) {
+            document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById('view-' + viewName).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (viewName === 'noc') {
+                setTimeout(drawLines, 50);
+            }
+        }
+
+        // ----------------------------------------------------
+        // MAP PLACEMENT LOGIC
+        // ----------------------------------------------------
+        const mapPositions = {
+            /* ── Tier 0: Internet Root ── */
+            "INTERNET_SERVICE": { x: 2200, y: 60 },
+
+            /* ── Tier 1: ISPs + Core ── */
+            "BSNL_1Gbps": { x: 1800, y: 260 },
+            "BSNL_200Mbps": { x: 2600, y: 260 },
+            "ECE_SERVER_ROOM": { x: 2200, y: 480 },
+
+            /* ── Tier 2: VLANs under ECE_SERVER_ROOM (Wider Spread) ── */
+            "ECE": { x: 150, y: 740 },
+            "CSE": { x: 450, y: 740 },
+            "EEE": { x: 750, y: 740 },
+            "PETROLEUM": { x: 1050, y: 740 },
+            "PRINCIPAL_OFFICE": { x: 1450, y: 740 },
+            "IRC": { x: 1850, y: 740 },
+            "IST": { x: 2150, y: 740 },
+            "PHARMACY": { x: 2450, y: 740 },
+            "FOOD_TECHNOLOGY": { x: 2750, y: 740 },
+            "SWARNOTSAV_BHAVAN": { x: 3050, y: 740 },
+            "WORKSHOP": { x: 3350, y: 740 },
+
+            /* ── Tier 3: Children of EEE ── */
+            "LIBRARY": { x: 600, y: 1020 },
+            "YOGA_CENTER": { x: 750, y: 1020 },
+            "MECH": { x: 900, y: 1020 },
+
+            /* ── Tier 3: Children of PRINCIPAL_OFFICE (Big Separation) ── */
+            "HOSTEL_OFFICE": { x: 1200, y: 1020 },
+            "CIVIL": { x: 1600, y: 1020 },
+            "NAGAVALLI 1": { x: 1850, y: 1020 },
+            "NAGAVALLI 2": { x: 2000, y: 1020 },
+            "NIVIDITHA": { x: 2150, y: 1020 },
+            "NALANDA": { x: 2300, y: 1020 },
+
+            /* ── Tier 4: Children of HOSTEL_OFFICE ── */
+            "CCC_LAB": { x: 1200, y: 1300 },
+
+            /* ── Tier 4: Children of CIVIL ── */
+            "CIVIL LABS": { x: 1450, y: 1300 },
+            "MBA": { x: 1600, y: 1300 },
+            "PHYSICS": { x: 1750, y: 1300 },
+            "STAFF QUARTERS A1": { x: 1450, y: 1560 },
+            "STAFF QUARTERS B1": { x: 1600, y: 1560 },
+
+            /* ── Tier 5: Sub-child of STAFF QUARTERS B1 ── */
+            "STAFF QUARTERS B2": { x: 1600, y: 1820 }
+        };
+
+        // Layout nodes on the canvas
+        let unknownX = 100, unknownY = 1600;
+        document.querySelectorAll('.map-card').forEach(card => {
+            const name = card.getAttribute('data-name');
+            if (mapPositions[name]) {
+                card.style.left = mapPositions[name].x + 'px';
+                card.style.top = mapPositions[name].y + 'px';
+            } else {
+                card.style.left = unknownX + 'px';
+                card.style.top = unknownY + 'px';
+                unknownX += 200;
+                if (unknownX > 2800) { unknownX = 100; unknownY += 250; }
+            }
+        });
+
+        // ----------------------------------------------------
+        // ZOOM — button-only, no mouse-wheel zoom
+        // Map stays scrollable (overflow:auto); we scale the inner container
+        // ----------------------------------------------------
+        let currentScale = 0.7;
+        const SCALE_STEP = 0.1;
+        const MIN_SCALE = 0.3;
+        const MAX_SCALE = 1.5;
+
+        function applyZoom() {
+            const container = document.getElementById('noc-container');
+            container.style.transformOrigin = 'top left';
+            container.style.transform = `scale(${currentScale})`;
+            // shrink the visual footprint so the wrapper scrolls correctly
+            container.style.width = (3400 * currentScale) + 'px';
+            container.style.height = (2000 * currentScale) + 'px';
+            document.getElementById('zoom-label').textContent =
+                Math.round(currentScale * 100) + '%';
+            drawLines();
+        }
+
+        function zoomIn() {
+            if (currentScale < MAX_SCALE) {
+                currentScale = Math.min(MAX_SCALE, +(currentScale + SCALE_STEP).toFixed(1));
+                applyZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (currentScale > MIN_SCALE) {
+                currentScale = Math.max(MIN_SCALE, +(currentScale - SCALE_STEP).toFixed(1));
+                applyZoom();
+            }
+        }
+
+        // Set initial zoom on load
+        window.addEventListener('load', () => { applyZoom(); });
+
+        // Prevent mouse-wheel from zooming (only scroll)
+        document.getElementById('zoom-wrapper').addEventListener('wheel', e => {
+            e.stopPropagation();
+        }, { passive: true });
+
+        // ----------------------------------------------------
+        // SVG Line Drawing (Between Absolute Map Nodes)
+        // ----------------------------------------------------
+
+        function drawLines() {
+            if (!document.getElementById('view-noc').classList.contains('active')) return;
+
+            const svg = document.getElementById('lines-svg');
+            svg.innerHTML = '';
+
+            const cards = document.querySelectorAll('.map-card');
+            cards.forEach(card => {
+                const parentId = card.getAttribute('data-parent-id');
+                if (parentId && parentId !== 'None') {
+                    const parentCard = document.getElementById('map-card-' + parentId);
+                    if (parentCard) {
+                        const px = parentCard.offsetLeft + parentCard.offsetWidth / 2;
+                        const py = parentCard.offsetTop + parentCard.offsetHeight;
+                        const cx = card.offsetLeft + card.offsetWidth / 2;
+                        const cy = card.offsetTop;
+
+                        const status = card.getAttribute('data-status');
+                        let color = '#334155';
+                        let isDown = false;
+                        if (status === 'DOWN') { color = '#EF4444'; isDown = true; }
+                        else if (status === 'HIGH_LATENCY') { color = '#F59E0B'; }
+
+                        const d = `M ${px} ${py} C ${px} ${(py + cy) / 2}, ${cx} ${(py + cy) / 2}, ${cx} ${cy}`;
+                        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        path.setAttribute("d", d);
+                        path.setAttribute("stroke", color);
+                        path.setAttribute("stroke-width", "3");
+                        path.setAttribute("fill", "none");
+                        if (isDown) path.classList.add('path-down');
+                        svg.appendChild(path);
+                    }
+                }
+            });
+
+            // Special Case: Draw lines from BOTH ISPs to ECE_SERVER_ROOM
+            const bsnl1 = Array.from(cards).find(c => c.getAttribute('data-name') === 'BSNL_1Gbps');
+            const bsnl2 = Array.from(cards).find(c => c.getAttribute('data-name') === 'BSNL_200Mbps');
+            const ece = Array.from(cards).find(c => c.getAttribute('data-name') === 'ECE_SERVER_ROOM');
+
+            if (ece) {
+                const cx = ece.offsetLeft + ece.offsetWidth / 2;
+                const cy = ece.offsetTop;
+                const status = ece.getAttribute('data-status');
+                let color = '#334155';
+                let isDown = false;
+                if (status === 'DOWN') { color = '#EF4444'; isDown = true; }
+                else if (status === 'HIGH_LATENCY') { color = '#F59E0B'; }
+
+                [bsnl1, bsnl2].forEach(isp => {
+                    if (isp) {
+                        const px = isp.offsetLeft + isp.offsetWidth / 2;
+                        const py = isp.offsetTop + isp.offsetHeight;
+                        const d = `M ${px} ${py} C ${px} ${(py + cy) / 2}, ${cx} ${(py + cy) / 2}, ${cx} ${cy}`;
+                        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        path.setAttribute("d", d);
+                        path.setAttribute("stroke", color);
+                        path.setAttribute("stroke-width", "3");
+                        path.setAttribute("fill", "none");
+                        if (isDown) path.classList.add('path-down');
+                        svg.appendChild(path);
+                    }
+                });
+            }
+        }
+
+        window.addEventListener('load', () => { drawLines(); });
+        window.addEventListener('resize', drawLines);
+
+        // ----------------------------------------------------
+        // Side Panel Logic
+        // ----------------------------------------------------
+        function openPanel(nodeId) {
+            document.getElementById('side-panel').classList.add('open');
+            document.getElementById('panel-content').style.display = 'none';
+            document.getElementById('panel-loader').style.display = 'block';
+
+            fetch(`/api/node/${nodeId}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('panel-loader').style.display = 'none';
+                    if (data.error) { alert("Error: " + data.error); return; }
+
+                    document.getElementById('panel-content').style.display = 'block';
+                    document.getElementById('p-name').textContent = data.name;
+                    document.getElementById('p-type').textContent = 'Node Type: ' + data.node_type;
+
+                    const statusEl = document.getElementById('p-status');
+                    statusEl.textContent = data.status || 'N/A';
+
+                    statusEl.style.color = '#9CA3AF';
+                    if (data.status === 'UP') statusEl.style.color = '#10B981';
+                    if (data.status === 'DOWN') statusEl.style.color = '#EF4444';
+                    if (data.status === 'HIGH_LATENCY') statusEl.style.color = '#F59E0B';
+
+                    document.getElementById('p-latency').textContent = (data.latency_ms !== null ? data.latency_ms + ' ms' : 'N/A');
+                    document.getElementById('p-ip').textContent = data.ip_address || 'N/A';
+                    document.getElementById('p-updated').textContent = data.last_updated || 'N/A';
+
+                    document.getElementById('btn-edit').href = `/edit_node/${nodeId}`;
+                    document.getElementById('btn-delete').href = `/delete_node/${nodeId}`;
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('panel-loader').style.display = 'none';
+                });
+        }
+
+        function closePanel() {
+            document.getElementById('side-panel').classList.remove('open');
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Monitoring</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<h1>🌐 Smart Network Monitoring Dashboard</h1>
+
+<div style="padding: 10px 20px;">
+    <a href="/"><button>🏠 Dashboard</button></a>
+    <a href="/add_vlan"><button>➕ Add VLAN</button></a>
+    <a href="/alerts"><button>🚨 Alerts</button></a>
+</div>
+
+<hr>
+
+<div style="padding:20px;">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
